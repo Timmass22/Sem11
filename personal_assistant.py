@@ -477,9 +477,153 @@ class ContactsManager:
         print()
 
 class FinancesManager:
-    def manage_finances(self):
-        print("Управление финансовыми записями:")
-        print("(Функциональность будет добавлена позже)")
+    FINANCES_FILE = "finance.json"
+
+    def __init__(self, id=None, amount=None, category=None, date=None, description=None):
+        self.id = id
+        self.amount = amount
+        self.category = category
+        self.date = date
+        self.description = description
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "amount": self.amount,
+            "category": self.category,
+            "date": self.date,
+            "description": self.description,
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return FinancesManager(
+            id=data["id"],
+            amount=data["amount"],
+            category=data["category"],
+            date=data["date"],
+            description=data["description"]
+        )
+
+    @classmethod
+    def load_finances(cls):
+        try:
+            with open(cls.FINANCES_FILE, "r") as file:
+                return [cls.from_dict(record) for record in json.load(file)]
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    @classmethod
+    def save_finances(cls, finances):
+        with open(cls.FINANCES_FILE, "w") as file:
+            json.dump([record.to_dict() for record in finances], file, indent=4)
+
+    @classmethod
+    def create(cls):
+        finances = cls.load_finances()
+        finance_id = max((record.id for record in finances), default=0) + 1
+        amount = float(input("Введите сумму операции (положительная для дохода, отрицательная для расхода): ").strip())
+        category = input("Введите категорию операции (например, 'Еда', 'Транспорт'): ").strip()
+        date = input("Введите дату операции (ДД-ММ-ГГГГ): ").strip()
+        description = input("Введите описание операции: ").strip()
+        record = cls(id=finance_id, amount=amount, category=category, date=date, description=description)
+        finances.append(record)
+        cls.save_finances(finances)
+        print("Финансовая запись успешно создана!")
+
+    @classmethod
+    def view_all(cls):
+        finances = cls.load_finances()
+        if not finances:
+            print("Нет доступных финансовых записей.")
+            return
+
+        for record in finances:
+            print(f"ID: {record.id}, Сумма: {record.amount}, Категория: {record.category}, Дата: {record.date}, Описание: {record.description}")
+        print()
+
+    @classmethod
+    def filter_by_category(cls):
+        finances = cls.load_finances()
+        category = input("Введите категорию для фильтрации: ").strip().lower()
+        filtered = [record for record in finances if record.category.lower() == category]
+        if filtered:
+            for record in filtered:
+                print(f"ID: {record.id}, Сумма: {record.amount}, Категория: {record.category}, Дата: {record.date}, Описание: {record.description}")
+        else:
+            print("Записи с указанной категорией не найдены.")
+
+    @classmethod
+    def generate_report(cls):
+        finances = cls.load_finances()
+        start_date = input("Введите начальную дату (ДД-ММ-ГГГГ): ").strip()
+        end_date = input("Введите конечную дату (ДД-ММ-ГГГГ): ").strip()
+        filtered = [record for record in finances if start_date <= record.date <= end_date]
+
+        total_income = sum(record.amount for record in filtered if record.amount > 0)
+        total_expense = sum(record.amount for record in filtered if record.amount < 0)
+        balance = total_income + total_expense
+
+        print(f"Отчёт с {start_date} по {end_date}:")
+        print(f"Общий доход: {total_income}")
+        print(f"Общие расходы: {total_expense}")
+        print(f"Баланс: {balance}")
+
+    @classmethod
+    def import_csv(cls):
+        file_name = input("Введите имя CSV-файла для импорта: ").strip()
+        try:
+            with open(file_name, "r", newline="") as file:
+                reader = csv.DictReader(file)
+                finances = cls.load_finances()
+                for row in reader:
+                    finances.append(cls.from_dict(row))
+                cls.save_finances(finances)
+                print("Финансовые записи успешно импортированы!")
+        except FileNotFoundError:
+            print("Файл не найден.")
+
+    @classmethod
+    def export_csv(cls):
+        file_name = input("Введите имя CSV-файла для экспорта: ").strip()
+        finances = cls.load_finances()
+        with open(file_name, "w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=["id", "amount", "category", "date", "description"])
+            writer.writeheader()
+            for record in finances:
+                writer.writerow(record.to_dict())
+        print("Финансовые записи успешно экспортированы!")
+
+    @classmethod
+    def manage(cls):
+        while True:
+            print("Управление финансовыми записями:")
+            print("1. Создать новую запись")
+            print("2. Просмотреть все записи")
+            print("3. Фильтрация записей по категории")
+            print("4. Генерация отчёта за период")
+            print("5. Импорт финансовых записей из CSV")
+            print("6. Экспорт финансовых записей в CSV")
+            print("7. Назад")
+
+            choice = input("Выберите действие: ").strip()
+
+            if choice == "1":
+                cls.create()
+            elif choice == "2":
+                cls.view_all()
+            elif choice == "3":
+                cls.filter_by_category()
+            elif choice == "4":
+                cls.generate_report()
+            elif choice == "5":
+                cls.import_csv()
+            elif choice == "6":
+                cls.export_csv()
+            elif choice == "7":
+                break
+            else:
+                print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 7.")
         print()
 
 class Calculator:
