@@ -192,7 +192,7 @@ class TasksManager:
         try:
             with open(cls.TASKS_FILE, "r") as file:
                 return [cls.from_dict(task) for task in json.load(file)]
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError):
             return []
 
     @classmethod
@@ -233,7 +233,7 @@ class TasksManager:
         if task:
             task.done = True
             cls.save_tasks(tasks)
-            print("Задача успешно отмечена как выполненная!")
+            print("Задача отмечена выполненной!")
         else:
             print("Задача не найдена.")
 
@@ -321,20 +321,170 @@ class TasksManager:
         print()
 
 class ContactsManager:
-    def manage_contacts(self):
-        print("\nУправление контактами:")
-        print("(Функциональность будет добавлена позже)")
+    CONTACTS_FILE = "contacts.json"
+
+    def __init__(self, id=None, name=None, phone=None, email=None):
+        self.id = id
+        self.name = name
+        self.phone = phone
+        self.email = email
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "phone": self.phone,
+            "email": self.email,
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return ContactsManager(
+            id=data["id"],
+            name=data["name"],
+            phone=data["phone"],
+            email=data["email"]
+        )
+
+    @classmethod
+    def load_contacts(cls):
+        try:
+            with open(cls.CONTACTS_FILE, "r") as file:
+                return [cls.from_dict(contact) for contact in json.load(file)]
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    @classmethod
+    def save_contacts(cls, contacts):
+        with open(cls.CONTACTS_FILE, "w") as file:
+            json.dump([contact.to_dict() for contact in contacts], file, indent=4)
+
+    @classmethod
+    def create(cls):
+        contacts = cls.load_contacts()
+        contact_id = max((contact.id for contact in contacts), default=0) + 1
+        name = input("Введите имя контакта: ").strip()
+        phone = input("Введите номер телефона: ").strip()
+        email = input("Введите адрес электронной почты: ").strip()
+        contact = cls(id=contact_id, name=name, phone=phone, email=email)
+        contacts.append(contact)
+        cls.save_contacts(contacts)
+        print("Контакт успешно создан!")
+
+    @classmethod
+    def view_all(cls):
+        contacts = cls.load_contacts()
+        if not contacts:
+            print("Нет доступных контактов.")
+            return
+
+        for contact in contacts:
+            print(f"ID: {contact.id}, Имя: {contact.name}, Телефон: {contact.phone}, Email: {contact.email}")
+        print()
+
+    @classmethod
+    def search(cls):
+        contacts = cls.load_contacts()
+        search_term = input("Введите имя или номер телефона: ").strip().lower()
+        results = [contact for contact in contacts if search_term in contact.name.lower() or search_term in contact.phone]
+
+        if results:
+            for contact in results:
+                print(f"ID: {contact.id}, Имя: {contact.name}, Телефон: {contact.phone}, Email: {contact.email}")
+        else:
+            print("Контакты не найдены.")
+
+    @classmethod
+    def edit(cls):
+        contacts = cls.load_contacts()
+        contact_id = int(input("Введите ID контакта для редактирования: ").strip())
+        contact = next((contact for contact in contacts if contact.id == contact_id), None)
+        if contact:
+            contact.name = input(f"Введите новое имя (текущее: {contact.name}): ").strip() or contact.name
+            contact.phone = input(f"Введите новый номер телефона (текущий: {contact.phone}): ").strip() or contact.phone
+            contact.email = input(f"Введите новый email (текущий: {contact.email}): ").strip() or contact.email
+            cls.save_contacts(contacts)
+            print("Контакт успешно обновлён!")
+        else:
+            print("Контакт не найден.")
+
+    @classmethod
+    def delete(cls):
+        contacts = cls.load_contacts()
+        contact_id = int(input("Введите ID контакта для удаления: ").strip())
+        contacts = [contact for contact in contacts if contact.id != contact_id]
+        cls.save_contacts(contacts)
+        print("Контакт успешно удалён!")
+
+    @classmethod
+    def import_csv(cls):
+        file_name = input("Введите имя CSV-файла для импорта: ").strip()
+        try:
+            with open(file_name, "r", newline="") as file:
+                reader = csv.DictReader(file)
+                contacts = cls.load_contacts()
+                for row in reader:
+                    contacts.append(cls.from_dict(row))
+                cls.save_contacts(contacts)
+                print("Контакты успешно импортированы!")
+        except FileNotFoundError:
+            print("Файл не найден.")
+
+    @classmethod
+    def export_csv(cls):
+        file_name = input("Введите имя CSV-файла для экспорта: ").strip()
+        contacts = cls.load_contacts()
+        with open(file_name, "w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=["id", "name", "phone", "email"])
+            writer.writeheader()
+            for contact in contacts:
+                writer.writerow(contact.to_dict())
+        print("Контакты успешно экспортированы!")
+
+    @classmethod
+    def manage(cls):
+        while True:
+            print("Управление контактами:")
+            print("1. Создать новый контакт")
+            print("2. Просмотреть список контактов")
+            print("3. Поиск контакта")
+            print("4. Редактировать контакт")
+            print("5. Удалить контакт")
+            print("6. Импорт контактов из CSV")
+            print("7. Экспорт контактов в CSV")
+            print("8. Назад")
+
+            choice = input("Выберите действие: ").strip()
+
+            if choice == "1":
+                cls.create()
+            elif choice == "2":
+                cls.view_all()
+            elif choice == "3":
+                cls.search()
+            elif choice == "4":
+                cls.edit()
+            elif choice == "5":
+                cls.delete()
+            elif choice == "6":
+                cls.import_csv()
+            elif choice == "7":
+                cls.export_csv()
+            elif choice == "8":
+                break
+            else:
+                print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 8.")
         print()
 
 class FinancesManager:
     def manage_finances(self):
-        print("\nУправление финансовыми записями:")
+        print("Управление финансовыми записями:")
         print("(Функциональность будет добавлена позже)")
         print()
 
 class Calculator:
     def manage_calculator(self):
-        print("\nКалькулятор:")
+        print("Калькулятор:")
         print("(Функциональность будет добавлена позже)")
         print()
 
@@ -356,16 +506,15 @@ def main_menu():
         elif choice == "2":
             TasksManager.manage()
         elif choice == "3":
-            ContactsManager().manage_contacts()
+            ContactsManager().manage()
         elif choice == "4":
-            FinancesManager().manage_finances()
+            FinancesManager().manage()
         elif choice == "5":
-            Calculator().manage_calculator()
+            Calculator().manage()
         elif choice == "6":
-            print("Спасибо за использование Персонального помощника. До свидания!")
+            print("Спасибо за использование Персонального помощника!")
             sys.exit()
         else:
             print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 6.")
-            
 if __name__ == "__main__":
     main_menu()
