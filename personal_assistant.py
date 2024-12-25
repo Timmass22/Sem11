@@ -523,7 +523,7 @@ class FinancesManager:
         finances = cls.load_finances()
         finance_id = max((record.id for record in finances), default=0) + 1
         amount = float(input("Введите сумму операции (положительная для дохода, отрицательная для расхода): ").strip())
-        category = input("Введите категорию операции (например, 'Еда', 'Транспорт'): ").strip()
+        category = input("Введите категорию операции: ").strip()
         date = input("Введите дату операции (ДД-ММ-ГГГГ): ").strip()
         description = input("Введите описание операции: ").strip()
         record = cls(id=finance_id, amount=amount, category=category, date=date, description=description)
@@ -627,9 +627,60 @@ class FinancesManager:
         print()
 
 class Calculator:
-    def manage_calculator(self):
-        print("Калькулятор:")
-        print("(Функциональность будет добавлена позже)")
+    @staticmethod
+    def add(a, b):
+        return a + b
+
+    @staticmethod
+    def subtract(a, b):
+        return a - b
+
+    @staticmethod
+    def multiply(a, b):
+        return a * b
+
+    @staticmethod
+    def divide(a, b):
+        if b == 0:
+            raise ZeroDivisionError("Деление на ноль недопустимо.")
+        return a / b
+
+    @staticmethod
+    def manage_calculator():
+        while True:
+            print("Калькулятор:")
+            print("1. Сложение")
+            print("2. Вычитание")
+            print("3. Умножение")
+            print("4. Деление")
+            print("5. Назад")
+
+            choice = input("Выберите действие: ").strip()
+
+            if choice in ["1", "2", "3", "4"]:
+                try:
+                    a = float(input("Введите первое число: ").strip())
+                    b = float(input("Введите второе число: ").strip())
+
+                    if choice == "1":
+                        print(f"Результат: {Calculator.add(a, b)}")
+                    elif choice == "2":
+                        print(f"Результат: {Calculator.subtract(a, b)}")
+                    elif choice == "3":
+                        print(f"Результат: {Calculator.multiply(a, b)}")
+                    elif choice == "4":
+                        try:
+                            print(f"Результат: {Calculator.divide(a, b)}")
+                        except ZeroDivisionError as e:
+                            print(f"Ошибка: {e}")
+
+                except ValueError:
+                    print("Ошибка: ввод должен быть числом.")
+
+            elif choice == "5":
+                break
+            else:
+                print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 5.")
         print()
 
 def main_menu():
@@ -654,7 +705,7 @@ def main_menu():
         elif choice == "4":
             FinancesManager().manage()
         elif choice == "5":
-            Calculator().manage()
+            Calculator().manage_calculator()
         elif choice == "6":
             print("Спасибо за использование Персонального помощника!")
             sys.exit()
