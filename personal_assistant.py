@@ -156,9 +156,168 @@ class Note:
                 print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 8.")
 
 class TasksManager:
-    def manage_tasks(self):
-        print("\nУправление задачами:")
-        print("(Функциональность будет добавлена позже)")
+    TASKS_FILE = "tasks.json"
+
+    def __init__(self, id=None, title=None, description=None, done=False, priority="Средний", due_date=None):
+        self.id = id
+        self.title = title
+        self.description = description
+        self.done = done
+        self.priority = priority
+        self.due_date = due_date
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "done": self.done,
+            "priority": self.priority,
+            "due_date": self.due_date,
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return TasksManager(
+            id=data["id"],
+            title=data["title"],
+            description=data["description"],
+            done=data["done"],
+            priority=data["priority"],
+            due_date=data["due_date"]
+        )
+
+    @classmethod
+    def load_tasks(cls):
+        try:
+            with open(cls.TASKS_FILE, "r") as file:
+                return [cls.from_dict(task) for task in json.load(file)]
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    @classmethod
+    def save_tasks(cls, tasks):
+        with open(cls.TASKS_FILE, "w") as file:
+            json.dump([task.to_dict() for task in tasks], file, indent=4)
+
+    @classmethod
+    def create(cls):
+        tasks = cls.load_tasks()
+        task_id = max((task.id for task in tasks), default=0) + 1
+        title = input("Введите заголовок задачи: ").strip()
+        description = input("Введите описание задачи: ").strip()
+        priority = input("Введите приоритет задачи (Высокий/Средний/Низкий): ").strip()
+        due_date = input("Введите срок выполнения (ДД-ММ-ГГГГ): ").strip()
+        task = cls(id=task_id, title=title, description=description, priority=priority, due_date=due_date)
+        tasks.append(task)
+        cls.save_tasks(tasks)
+        print("Задача успешно создана!")
+
+    @classmethod
+    def view_all(cls):
+        tasks = cls.load_tasks()
+        if not tasks:
+            print("Нет доступных задач.")
+            return
+
+        for task in tasks:
+            status = "Выполнено" if task.done else "Не выполнено"
+            print(f"ID: {task.id}, Заголовок: {task.title}, Статус: {status}, Приоритет: {task.priority}, Срок: {task.due_date}")
+        print()
+
+    @classmethod
+    def mark_done(cls):
+        tasks = cls.load_tasks()
+        task_id = int(input("Введите ID задачи для отметки как выполненной: ").strip())
+        task = next((task for task in tasks if task.id == task_id), None)
+        if task:
+            task.done = True
+            cls.save_tasks(tasks)
+            print("Задача успешно отмечена как выполненная!")
+        else:
+            print("Задача не найдена.")
+
+    @classmethod
+    def edit(cls):
+        tasks = cls.load_tasks()
+        task_id = int(input("Введите ID задачи для редактирования: ").strip())
+        task = next((task for task in tasks if task.id == task_id), None)
+        if task:
+            task.title = input(f"Введите новый заголовок (текущий: {task.title}): ").strip() or task.title
+            task.description = input(f"Введите новое описание (текущее: {task.description}): ").strip() or task.description
+            task.priority = input(f"Введите новый приоритет (текущий: {task.priority}): ").strip() or task.priority
+            task.due_date = input(f"Введите новый срок выполнения (текущий: {task.due_date}): ").strip() or task.due_date
+            cls.save_tasks(tasks)
+            print("Задача успешно обновлена!")
+        else:
+            print("Задача не найдена.")
+
+    @classmethod
+    def delete(cls):
+        tasks = cls.load_tasks()
+        task_id = int(input("Введите ID задачи для удаления: ").strip())
+        tasks = [task for task in tasks if task.id != task_id]
+        cls.save_tasks(tasks)
+        print("Задача успешно удалена!")
+
+    @classmethod
+    def import_csv(cls):
+        file_name = input("Введите имя CSV-файла для импорта: ").strip()
+        try:
+            with open(file_name, "r", newline="") as file:
+                reader = csv.DictReader(file)
+                tasks = cls.load_tasks()
+                for row in reader:
+                    tasks.append(cls.from_dict(row))
+                cls.save_tasks(tasks)
+                print("Задачи успешно импортированы!")
+        except FileNotFoundError:
+            print("Файл не найден.")
+
+    @classmethod
+    def export_csv(cls):
+        file_name = input("Введите имя CSV-файла для экспорта: ").strip()
+        tasks = cls.load_tasks()
+        with open(file_name, "w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=["id", "title", "description", "done", "priority", "due_date"])
+            writer.writeheader()
+            for task in tasks:
+                writer.writerow(task.to_dict())
+        print("Задачи успешно экспортированы!")
+
+    @classmethod
+    def manage(cls):
+        while True:
+            print("Управление задачами:")
+            print("1. Создать новую задачу")
+            print("2. Просмотреть список задач")
+            print("3. Отметить задачу как выполненную")
+            print("4. Редактировать задачу")
+            print("5. Удалить задачу")
+            print("6. Импорт задач из CSV")
+            print("7. Экспорт задач в CSV")
+            print("8. Назад")
+
+            choice = input("Выберите действие: ").strip()
+
+            if choice == "1":
+                cls.create()
+            elif choice == "2":
+                cls.view_all()
+            elif choice == "3":
+                cls.mark_done()
+            elif choice == "4":
+                cls.edit()
+            elif choice == "5":
+                cls.delete()
+            elif choice == "6":
+                cls.import_csv()
+            elif choice == "7":
+                cls.export_csv()
+            elif choice == "8":
+                break
+            else:
+                print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 8.")
         print()
 
 class ContactsManager:
@@ -180,11 +339,6 @@ class Calculator:
         print()
 
 def main_menu():
-    tasks_manager = TasksManager()
-    contacts_manager = ContactsManager()
-    finances_manager = FinancesManager()
-    calculator = Calculator()
-
     while True:
         print("Добро пожаловать в Персональный помощник!")
         print("Выберите действие:")
@@ -200,19 +354,18 @@ def main_menu():
         if choice == "1":
             Note.manage()
         elif choice == "2":
-            tasks_manager.manage_tasks()
+            TasksManager.manage()
         elif choice == "3":
-            contacts_manager.manage_contacts()
+            ContactsManager().manage_contacts()
         elif choice == "4":
-            finances_manager.manage_finances()
+            FinancesManager().manage_finances()
         elif choice == "5":
-            calculator.manage_calculator()
+            Calculator().manage_calculator()
         elif choice == "6":
             print("Спасибо за использование Персонального помощника. До свидания!")
             sys.exit()
         else:
             print("Некорректный ввод. Пожалуйста, выберите действие от 1 до 6.")
-
+            
 if __name__ == "__main__":
     main_menu()
-
